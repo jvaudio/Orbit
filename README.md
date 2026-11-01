@@ -2,6 +2,12 @@
 
 A native macOS menu bar home for small, independently enabled utilities. Find My Mouse spotlights a rapidly jiggled pointer and dims every display. Right-Click Menu adds instant action tiles and native color tags in supported Finder views and text controls.
 
+## Install
+
+Download the universal app ZIP from [GitHub Releases](https://github.com/jvaudio/Orbit/releases/latest), unzip it, and drag **Orbit.app** into **Applications**. Open Orbit from Applications. The first release supports Apple silicon and Intel Macs running macOS 14 or later.
+
+Orbit lives in the menu bar. Enable the utilities you want in its window; both start off. Right-Click Menu needs Accessibility permission in System Settings. Launch at login is optional in Orbit Settings. Apple's cursor enlargement setting is left unchanged.
+
 ## Run
 
 Requires macOS 14 or later and Xcode with its command-line tools selected. No third-party packages or network services are needed.
@@ -39,7 +45,7 @@ swift test
 ./script/build_and_run.sh --debug
 ```
 
-`--build-only` produces the development bundle without replacing or restarting installed Orbit. Other modes install and use `/Applications/Orbit.app`. `--verify` checks the installed process path and preserves/checks previously enabled login registration; it does not prove an actual future login session, shake detection, or visual behavior. The local bundle is built for the current Mac's architecture. Local builds use an available Developer ID signing identity to preserve Accessibility approval across updates; set `ORBIT_CODE_SIGN_IDENTITY` to choose an identity explicitly (or `-` for ad-hoc signing). Without an identity, builds fall back to ad-hoc signing and may need renewed Accessibility approval. Notarization, universal packaging, public distribution, and automatic updates are not configured.
+`--build-only` produces the development bundle without replacing or restarting installed Orbit. Other modes install and use `/Applications/Orbit.app`. `--verify` checks the installed process path and preserves/checks previously enabled login registration; it does not prove an actual future login session, shake detection, or visual behavior. The local bundle is built for the current Mac's architecture. Local builds use an available Developer ID signing identity to preserve Accessibility approval across updates; set `ORBIT_CODE_SIGN_IDENTITY` to choose an identity explicitly (or `-` for ad-hoc signing). Without an identity, builds fall back to ad-hoc signing and may need renewed Accessibility approval. The local Run build is separate from the notarized universal release package. Automatic updates are not configured.
 
 ### Testing direct menu actions
 
@@ -100,3 +106,11 @@ Rename uses an Orbit dialog. Share opens the system sharing chooser. Delete uses
 Disabling the utility removes the input filter, dismisses its UI, and clears transient state. No pointer polling, keyboard monitoring, screen capture, or native-menu snapshot persistence is used. No native context menu is opened during ordinary direct file actions.
 
 Tests cover balanced click suppression, drag pass-through, permissions/lifecycle, spotlight dismissal when a click is intercepted, file copy/move/rename, identity checks, conflict/recursion refusal, native tagging with custom-tag preservation, clipboard generation and file-set matching, and menu action availability. See VALIDATION.md for current live verification and limitations. The older capture-and-replace validation history there applies to the prior architecture.
+
+## Packaging a public release
+
+```sh
+ORBIT_NOTARY_PROFILE=your-keychain-profile ./script/package_release.sh
+```
+
+This runs the tests, builds optimized arm64 and x86_64 binaries, compiles the icon, signs with Developer ID and hardened runtime, submits to Apple, staples the accepted ticket, and verifies Gatekeeper. It produces `dist/release/<version>/Orbit-<version>-macOS-universal.zip` and `SHA256SUMS.txt` without replacing or launching the installed app. Set `ORBIT_CODE_SIGN_IDENTITY` to select a Developer ID identity explicitly. Credentials stay in Keychain; no Apple password or private key belongs in this repository. Existing output is never overwritten.

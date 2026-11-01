@@ -304,3 +304,9 @@ Direct-app regression is complete: Finder Copy/Paste, Cut/move-Paste, Rename, Sh
 
 - Replaced the live action buttons' automatic NSButtonCell imageAbove interior layout with a centered icon-and-label group: 22-point icon slot, 7-point gap, measured label height, and equal remaining top/bottom padding. Tag buttons keep their existing rendering. Native NSButton tracking, target/action wiring, enabled state, accessibility labels, and menu dispatch remain in place.
 - Matched the SwiftUI preview icon slot to the live menu. All three focused MenuActionHeaderTests pass, covering six action callbacks, unavailable actions, and color-tag callbacks. Built and installed in Applications with launch at login preserved.
+
+## Public release 0.1.0 (build 5)
+
+- Added script/package_release.sh to run tests, compile optimized arm64/x86_64 code, package the native icon, Developer ID sign with secure timestamp and hardened runtime, notarize, staple, assess Gatekeeper, and create the final ZIP/checksum. It leaves the installed app untouched and refuses existing output. Credentials remain in Keychain.
+- All 67 tests passed. Universal executable contains arm64 and x86_64 slices, each with macOS 14 minimum deployment target. Apple notarization submission 5f10c17a-4e41-4bdd-b79c-ba6781b9c90b was Accepted; stapler validation, strict code-signature validation, and Gatekeeper Notarized Developer ID assessment passed on the app extracted from the final ZIP.
+- Launched that optimized extracted app on Apple silicon / macOS 27.2. CUA inspected Overview and Right-Click Menu, showing both enabled utilities, all six tiles, and Ready in supported apps. Restored the installed Applications copy afterward. Physical Intel and macOS 14 checks remain unavailable. Full live feature checks above refer to the same feature code in development builds, rather than a fresh physical regression of the optimized package.
