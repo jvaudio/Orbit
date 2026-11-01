@@ -125,4 +125,23 @@ The stable feed is `https://github.com/jvaudio/Orbit/releases/latest/download/ap
 
 The private update key stays in Keychain; only its public key is checked in. Keep a secure off-repository backup of the Keychain/signing material. The feed and archive are independently signed, HTTPS is used for hosting, and verification is required before extracting an update. The pinned framework and its license are embedded in app bundles.
 
-For example, after committing and pushing the version’s source and an annotated `v<version>` tag, create a draft GitHub release using its notes and upload **all three** files from `dist/release/<version>/`: `Orbit-<version>-macOS-universal.zip`, `SHA256SUMS.txt`, and `appcast.xml`. Publish it as Latest only after all assets are uploaded. Verify the stable latest-feed URL anonymously and run `script/verify_appcast.swift` with the shipped Info.plist, downloaded feed, and downloaded ZIP; it checks signatures, archive length, download URL, and version metadata against the shipped public key without accessing private keys.
+## Release automation
+
+On the signing Mac, increment both version fields in `Resources/Info.plist`, add `docs/releases/<version>.md`, then commit and push `main`. Run:
+
+```sh
+ORBIT_NOTARY_PROFILE=your-keychain-profile python3 script/release.py
+```
+
+The command runs tests and packages the signed/notarized universal app, validates the final archive against the committed metadata and public update key, creates and pushes the version tag, and uploads **the app ZIP, SHA256SUMS.txt, and signed appcast.xml** to a draft. It downloads and independently verifies the uploaded draft before publishing it as Latest. Finally it checks anonymous public downloads and the stable latest-feed URL. A public verification failure returns the release to draft. No signing credentials are sent to GitHub.
+
+Preflight rejects dirty/unpushed source, stale versions/builds, existing tags/output, and missing notes. Failures before publication leave any created release as a draft. Inspect failed drafts and artifacts before retrying; the command never overwrites a published release or moves an existing tag. Use the existing package script separately when only a local artifact is wanted.
+
+Read-only verification of a published release:
+
+```sh
+python3 script/release.py --verify v0.1.1
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s Tests/ReleaseAutomationTests -v
+```
+
+The GitHub **Verify published release** workflow checks new releases independently on a macOS runner. It verifies the required assets, checksum, feed and archive signatures against the public key in tagged source, exact bundle metadata, Apple signing team, hardened runtime, notarization ticket, Gatekeeper acceptance, and both architectures. A failed verification of a newly published release returns it to draft. A manual workflow run is read-only. This guard is asynchronous and depends on GitHub Actions being available; the signing-Mac command remains the primary pre-publication gate. Direct manual publishing can briefly expose an invalid release before the guard runs, so use the command above for future releases. Historical 0.1.0 predates the signed feed requirement and is not audited retroactively.

@@ -1,0 +1,33 @@
+name: Verify published release
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to verify (for example v0.1.1)'
+        required: true
+        type: string
+permissions:
+  contents: write
+concurrency:
+  group: release-verification-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ORBIT_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Verify all assets, signatures, notarization, and tagged metadata
+        id: verify
+        run: python3 script/release.py --verify "$ORBIT_TAG"
+      - name: Return invalid newly published release to draft
+        if: failure() && steps.verify.outcome == 'failure' && github.event_name == 'release'
+        run: gh release edit "$ORBIT_TAG" --repo "$GITHUB_REPOSITORY" --draft=true
