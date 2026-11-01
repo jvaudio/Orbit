@@ -10,7 +10,7 @@ Orbit lives in the menu bar. Enable the utilities you want in its window; both s
 
 ## Run
 
-Requires macOS 14 or later and Xcode with its command-line tools selected. No third-party packages or network services are needed.
+Requires macOS 14 or later and Xcode with its command-line tools selected. SwiftPM downloads the pinned Sparkle updater dependency. Utility features work locally; update checks contact GitHub over HTTPS.
 
 ```sh
 ./script/build_and_run.sh
@@ -45,7 +45,7 @@ swift test
 ./script/build_and_run.sh --debug
 ```
 
-`--build-only` produces the development bundle without replacing or restarting installed Orbit. Other modes install and use `/Applications/Orbit.app`. `--verify` checks the installed process path and preserves/checks previously enabled login registration; it does not prove an actual future login session, shake detection, or visual behavior. The local bundle is built for the current Mac's architecture. Local builds use an available Developer ID signing identity to preserve Accessibility approval across updates; set `ORBIT_CODE_SIGN_IDENTITY` to choose an identity explicitly (or `-` for ad-hoc signing). Without an identity, builds fall back to ad-hoc signing and may need renewed Accessibility approval. The local Run build is separate from the notarized universal release package. Automatic updates are not configured.
+`--build-only` produces the development bundle without replacing or restarting installed Orbit. Other modes install and use `/Applications/Orbit.app`. `--verify` checks the installed process path and preserves/checks previously enabled login registration; it does not prove an actual future login session, shake detection, or visual behavior. The local bundle is built for the current Mac's architecture. Local builds use an available Developer ID signing identity to preserve Accessibility approval across updates; set `ORBIT_CODE_SIGN_IDENTITY` to choose an identity explicitly (or `-` for ad-hoc signing). Without an identity, builds fall back to ad-hoc signing and may need renewed Accessibility approval. The local Run build is separate from the notarized universal release package. Public releases include Sparkle automatic updates.
 
 ### Testing direct menu actions
 
@@ -114,3 +114,15 @@ ORBIT_NOTARY_PROFILE=your-keychain-profile ./script/package_release.sh
 ```
 
 This runs the tests, builds optimized arm64 and x86_64 binaries, compiles the icon, signs with Developer ID and hardened runtime, submits to Apple, staples the accepted ticket, and verifies Gatekeeper. It produces `dist/release/<version>/Orbit-<version>-macOS-universal.zip` and `SHA256SUMS.txt` without replacing or launching the installed app. Set `ORBIT_CODE_SIGN_IDENTITY` to select a Developer ID identity explicitly. Credentials stay in Keychain; no Apple password or private key belongs in this repository. Existing output is never overwritten.
+
+## Automatic updates
+
+Public builds check daily by default. Choose **Check for Updates…** in Orbit’s menu or Settings for an immediate check. Settings also offers optional automatic download and installation on quit; it is off by default. Sparkle can install and relaunch immediately when the user accepts an update. User settings and enabled utilities persist, and the actual enabled launch-at-login state is recorded immediately before installation and restored on the next launch if needed. No system profiling is sent.
+
+Orbit 0.1.0 users must install 0.1.1 manually once. Development Run builds disable the updater to keep published updates from replacing a working development build.
+
+The stable feed is `https://github.com/jvaudio/Orbit/releases/latest/download/appcast.xml`. Each future release **must upload its generated signed appcast.xml alongside the exact signed ZIP and checksum, before publishing it as Latest**. The packaging script generates the feed from the final notarized archive, uses Keychain account `com.jerryvoelker.Orbit` (override with `ORBIT_SPARKLE_ACCOUNT`), checks the key against the app’s public key, and verifies the signed feed. Never edit a generated feed after signing. Increment both the marketing version and numeric build number in `Resources/Info.plist`. Keep the bundle identifier, signing team, and installation path stable. Do not mark a release Latest without its feed asset; a missing feed would break scheduled checks for installed users.
+
+The private update key stays in Keychain; only its public key is checked in. Keep a secure off-repository backup of the Keychain/signing material. The feed and archive are independently signed, HTTPS is used for hosting, and verification is required before extracting an update. The pinned framework and its license are embedded in app bundles.
+
+For example, after committing and pushing the version’s source and an annotated `v<version>` tag, create a draft GitHub release using its notes and upload **all three** files from `dist/release/<version>/`: `Orbit-<version>-macOS-universal.zip`, `SHA256SUMS.txt`, and `appcast.xml`. Publish it as Latest only after all assets are uploaded. Verify the stable latest-feed URL anonymously and run `script/verify_appcast.swift` with the shipped Info.plist, downloaded feed, and downloaded ZIP; it checks signatures, archive length, download URL, and version metadata against the shipped public key without accessing private keys.

@@ -18,6 +18,7 @@ private final class SystemLoginItemRegistration: LoginItemRegistration {
 
 @MainActor @Observable
 final class LoginItemService {
+    static let updateRestoreKey = "orbit.loginItem.restoreAfterUpdate"
     @ObservationIgnored private let registration: any LoginItemRegistration
     private(set) var status: SMAppService.Status
     private(set) var errorMessage: String?
@@ -53,6 +54,13 @@ final class LoginItemService {
     func restoreAfterUpdate() {
         refresh()
         if status != .enabled && status != .requiresApproval { setEnabled(true) }
+    }
+
+    /// Sparkle records the actual enabled registration just before installation.
+    func restoreAfterSparkleUpdate(preferences: UserDefaults = .standard) {
+        guard preferences.bool(forKey: Self.updateRestoreKey) else { return }
+        restoreAfterUpdate()
+        if isEnabled { preferences.removeObject(forKey: Self.updateRestoreKey) }
     }
 
     func setEnabled(_ enabled: Bool) {

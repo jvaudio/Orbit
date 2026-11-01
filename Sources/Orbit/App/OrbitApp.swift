@@ -24,9 +24,13 @@ struct OrbitApp: App {
                 .accessibilityLabel("Orbit")
         }
         Settings {
-            GeneralSettingsView(loginItem: delegate.model.loginItem, appearance: delegate.model.appearance)
+            GeneralSettingsView(loginItem: delegate.model.loginItem, appearance: delegate.model.appearance, updates: delegate.model.updates)
         }
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { delegate.model.updates.check() }
+                    .disabled(!delegate.model.updates.canCheck)
+            }
             CommandGroup(before: .appSettings) {
                 Button("Open Orbit…") { delegate.model.openUtilities() }
                     .keyboardShortcut("o", modifiers: [.command, .shift])
@@ -45,6 +49,12 @@ final class OrbitAppDelegate: NSObject, NSApplicationDelegate {
         if CommandLine.arguments.contains("--restore-login-item") {
             model.loginItem.restoreAfterUpdate()
         }
+        model.loginItem.restoreAfterSparkleUpdate()
+#if DEBUG
+        model.updates.start(enabled: false)
+#else
+        model.updates.start(enabled: true)
+#endif
         model.registry.startEnabled()
         if CommandLine.arguments.contains("--show-utilities") || !UserDefaults.standard.bool(forKey: "orbit.hasOpenedUtilities") {
             model.openUtilities()
@@ -72,6 +82,7 @@ final class OrbitModel {
     let rightClick = RightClickUtility()
     let loginItem = LoginItemService()
     let appearance = AppAppearanceSettings()
+    let updates = UpdateService()
     @ObservationIgnored private var utilitiesWindow: UtilitiesWindowController?
 
 #if DEBUG

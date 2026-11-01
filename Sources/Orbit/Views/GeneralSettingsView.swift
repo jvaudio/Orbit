@@ -5,6 +5,7 @@ import AppKit
 struct GeneralSettingsView: View {
     let loginItem: LoginItemService
     let appearance: AppAppearanceSettings
+    let updates: UpdateService
 
     var body: some View {
         TabView {
@@ -13,7 +14,7 @@ struct GeneralSettingsView: View {
             about
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 500, height: 410)
+        .frame(width: 500, height: 590)
         .onAppear { loginItem.refresh() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in loginItem.refresh() }
     }
@@ -26,6 +27,20 @@ struct GeneralSettingsView: View {
                     ForEach(AppAppearanceSettings.Mode.allCases) { Text($0.title).tag($0) }
                 }
                 .labelsHidden().pickerStyle(.segmented)
+            }
+            Section("Updates") {
+                Toggle("Automatically check for updates", isOn: Binding(
+                    get: { updates.automaticChecks }, set: { updates.setAutomaticChecks($0) }))
+                    .disabled(!updates.isStarted)
+                Toggle("Automatically download and install updates", isOn: Binding(
+                    get: { updates.automaticDownloads }, set: { updates.setAutomaticDownloads($0) }))
+                    .disabled(!updates.isStarted || !updates.automaticChecks)
+                Text("Orbit checks daily. Downloaded updates install when Orbit quits, or when you choose Install and Relaunch.")
+                    .font(.callout).foregroundStyle(.secondary)
+                Button("Check for Updates…") { updates.check() }.disabled(!updates.canCheck)
+                if let error = updates.errorMessage {
+                    Text(error).font(.callout).foregroundStyle(.secondary)
+                }
             }
             Section {
                 Toggle("Launch Orbit at login", isOn: Binding(
@@ -54,7 +69,7 @@ struct GeneralSettingsView: View {
             OrbitBrandIcon(size: 80)
             VStack(spacing: 5) {
                 Text("Orbit").font(.largeTitle.bold())
-                Text("Version 0.1.0").foregroundStyle(.secondary)
+                Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—")").foregroundStyle(.secondary)
             }
             Text("Small utilities for your Mac.").font(.title3)
             Label("Your settings stay on this device.", systemImage: "lock")

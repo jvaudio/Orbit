@@ -23,7 +23,7 @@ struct UtilitiesView: View {
                     OrbitBrandIcon(size: 20)
                     Text("Orbit").fontWeight(.medium)
                     Spacer()
-                    Text("0.1.0").monospacedDigit()
+                    Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—").monospacedDigit()
                 }
                 .font(.caption).foregroundStyle(.secondary)
                 .padding(16)

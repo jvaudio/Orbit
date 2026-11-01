@@ -3,6 +3,36 @@ import ServiceManagement
 @testable import Orbit
 
 final class LoginItemServiceTests: XCTestCase {
+    func testSparkleRestoreOnlyConsumesEnabledRegistrationMarker() async {
+        await MainActor.run {
+            let name = "OrbitLoginTests.\(UUID().uuidString)"
+            let prefs = UserDefaults(suiteName: name)!
+            defer { prefs.removePersistentDomain(forName: name) }
+            let registration = FakeLoginRegistration(status: .notRegistered)
+            let service = LoginItemService(registration: registration)
+            service.restoreAfterSparkleUpdate(preferences: prefs)
+            XCTAssertEqual(registration.registerCalls, 0)
+            prefs.set(true, forKey: LoginItemService.updateRestoreKey)
+            service.restoreAfterSparkleUpdate(preferences: prefs)
+            XCTAssertEqual(registration.registerCalls, 1)
+            XCTAssertTrue(service.isEnabled)
+            XCTAssertNil(prefs.object(forKey: LoginItemService.updateRestoreKey))
+        }
+    }
+    func testFailedSparkleRestoreRetainsMarkerForRetry() async {
+        await MainActor.run {
+            let name = "OrbitLoginTests.\(UUID().uuidString)"
+            let prefs = UserDefaults(suiteName: name)!
+            defer { prefs.removePersistentDomain(forName: name) }
+            prefs.set(true, forKey: LoginItemService.updateRestoreKey)
+            let registration = FakeLoginRegistration(status: .notRegistered)
+            registration.shouldFail = true
+            let service = LoginItemService(registration: registration)
+            service.restoreAfterSparkleUpdate(preferences: prefs)
+            XCTAssertTrue(prefs.bool(forKey: LoginItemService.updateRestoreKey))
+            XCTAssertFalse(service.isEnabled)
+        }
+    }
     func testUpdateRestoresLostRegistrationAndRefreshesActualStatus() async {
         await MainActor.run {
             for initial in [SMAppService.Status.notRegistered, .notFound] {

@@ -56,8 +56,10 @@ if [[ -z "$ORBIT_SIGNING_IDENTITY" ]]; then
     ORBIT_SIGNING_IDENTITY="-"
     echo "No Developer ID identity found; Accessibility approval may need renewal after builds." >&2
 fi
+source "$ORBIT_ROOT/script/lib/sparkle.sh"
+orbit_embed_sparkle "$ORBIT_STAGED_APP" "$(dirname "$ORBIT_BINARY")" "$ORBIT_SIGNING_IDENTITY" --timestamp=none
 /usr/bin/codesign --force --timestamp=none --sign "$ORBIT_SIGNING_IDENTITY" "$ORBIT_STAGED_APP"
-/usr/bin/codesign --verify --strict "$ORBIT_STAGED_APP"
+/usr/bin/codesign --verify --deep --strict "$ORBIT_STAGED_APP"
 
 ORBIT_LOGIN_STATE="unknown"
 if [[ "$MODE" != "--build-only" && -e "$ORBIT_INSTALLED_APP" ]]; then

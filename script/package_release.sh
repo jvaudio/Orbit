@@ -23,6 +23,8 @@ xcrun actool Resources/Orbit.icon --compile "$ORBIT_OUTPUT/icon-output" \
     --platform macosx --minimum-deployment-target 14.0 --app-icon Orbit --target-device mac \
     --output-partial-info-plist "$ORBIT_OUTPUT/icon-output/Partial.plist" --output-format human-readable-text
 cp "$ORBIT_OUTPUT/icon-output/Assets.car" "$ORBIT_OUTPUT/icon-output/Orbit.icns" "$ORBIT_APP/Contents/Resources/"
+source "$ORBIT_ROOT/script/lib/sparkle.sh"
+orbit_embed_sparkle "$ORBIT_APP" "$(dirname "$ORBIT_BIN")" "$ORBIT_IDENTITY" --timestamp
 codesign --force --options runtime --timestamp --sign "$ORBIT_IDENTITY" "$ORBIT_APP"
 codesign --verify --strict --verbose=2 "$ORBIT_APP"
 ditto -c -k --keepParent "$ORBIT_APP" "$ORBIT_OUTPUT/Notarization.zip"
@@ -41,4 +43,5 @@ codesign --verify --deep --strict --verbose=2 "$ORBIT_APP"
 spctl --assess --type execute --verbose=2 "$ORBIT_APP"
 ditto -c -k --keepParent "$ORBIT_APP" "$ORBIT_ZIP"
 (cd "$ORBIT_OUTPUT" && shasum -a 256 "$(basename "$ORBIT_ZIP")" > SHA256SUMS.txt)
+"$ORBIT_ROOT/script/generate_appcast.sh" "$ORBIT_OUTPUT"
 echo "Release ready: $ORBIT_ZIP"

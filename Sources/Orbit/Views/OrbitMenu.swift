@@ -23,6 +23,7 @@ struct OrbitMenu: View {
         Button("Open Orbit…", systemImage: "macwindow") { model.openUtilities() }
         SettingsLink { Label("Settings…", systemImage: "gearshape") }
             .keyboardShortcut(",")
+        Button("Check for Updates…") { model.updates.check() }.disabled(!model.updates.canCheck)
         Divider()
         Button("Quit Orbit") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
