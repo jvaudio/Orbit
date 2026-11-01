@@ -2,6 +2,10 @@
 
 A native macOS menu bar home for small, independently enabled utilities. Find My Mouse spotlights a rapidly jiggled pointer and dims every display. Right-Click Menu adds instant action tiles and native color tags in supported Finder views and text controls.
 
+## Project actions and agent instructions
+
+Codex provides **Run** and **Release** actions from the committed `.codex/environments/environment.toml`. Release uses the same verified publishing pipeline on each configured signing Mac. See [release setup and usage](docs/RELEASING.md) and the root [agent instructions](AGENTS.md). Signing credentials must be provisioned separately in each Mac’s Keychain.
+
 ## Install
 
 Download the universal app ZIP from [GitHub Releases](https://github.com/jvaudio/Orbit/releases/latest), unzip it, and drag **Orbit.app** into **Applications**. Open Orbit from Applications. The first release supports Apple silicon and Intel Macs running macOS 14 or later.
@@ -127,10 +131,10 @@ The private update key stays in Keychain; only its public key is checked in. Kee
 
 ## Release automation
 
-On the signing Mac, increment both version fields in `Resources/Info.plist`, add `docs/releases/<version>.md`, then commit and push `main`. Run:
+After the [one-time signing-Mac setup](docs/RELEASING.md), choose Codex **Release**, or use the command below. On the signing Mac, increment both version fields in `Resources/Info.plist`, add `docs/releases/<version>.md`, then commit and push `main`. Run:
 
 ```sh
-ORBIT_NOTARY_PROFILE=your-keychain-profile python3 script/release.py
+python3 script/release.py
 ```
 
 The command runs tests and packages the signed/notarized universal app, validates the final archive against the committed metadata and public update key, creates and pushes the version tag, and uploads **the app ZIP, SHA256SUMS.txt, and signed appcast.xml** to a draft. It downloads and independently verifies the uploaded draft before publishing it as Latest. Finally it checks anonymous public downloads and the stable latest-feed URL. A public verification failure returns the release to draft. No signing credentials are sent to GitHub.

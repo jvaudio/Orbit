@@ -2,3 +2,6 @@
 dist/
 .DS_Store
 .swiftpm/
+
+# Per-Mac release labels; signing credentials stay in Keychain.
+.orbit-release.json

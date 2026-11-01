@@ -1,6 +1,8 @@
 import importlib.util
 from pathlib import Path
 import plistlib
+import json
+import os
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -90,6 +92,36 @@ class PublicationTests(unittest.TestCase):
             release.publish()
         self.assertFalse(any(c[0].endswith("package_release.sh") for c in self.calls))
 
+
+
+class ConfigurationTests(unittest.TestCase):
+    def testLocalLabelsLoadAndExplicitEnvironmentWins(self):
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            (root / ".orbit-release.json").write_text(json.dumps({
+                "notary_profile": "local-profile", "sparkle_account": "local-account"}))
+            with patch.object(release, "ROOT", root), patch.dict(os.environ, {"ORBIT_NOTARY_PROFILE": "explicit-profile"}, clear=True):
+                release.load_release_config()
+                self.assertEqual(os.environ["ORBIT_NOTARY_PROFILE"], "explicit-profile")
+                self.assertEqual(os.environ["ORBIT_SPARKLE_ACCOUNT"], "local-account")
+
+    def testCredentialsAndUnknownFieldsAreRejected(self):
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            (root / ".orbit-release.json").write_text('{"password":"not-allowed"}')
+            with patch.object(release, "ROOT", root), patch.dict(os.environ, {}, clear=True):
+                with self.assertRaisesRegex(RuntimeError, "never store credentials"):
+                    release.load_release_config()
+                self.assertNotIn("ORBIT_NOTARY_PROFILE", os.environ)
+
+    def testNewMachineGetsSetupInstructionsAndVerifyDoesNotNeedConfig(self):
+        with tempfile.TemporaryDirectory() as root:
+            with patch.object(release, "ROOT", Path(root)), patch.dict(os.environ, {}, clear=True):
+                with self.assertRaisesRegex(RuntimeError, "docs/RELEASING.md"):
+                    release.load_release_config()
+                with patch.object(release.sys, "argv", ["release.py", "--verify", "v0.1.1"]), patch.object(release, "verify_remote") as verify:
+                    release.main()
+                    verify.assert_called_once_with("v0.1.1")
 
 
 class AssetTests(unittest.TestCase):

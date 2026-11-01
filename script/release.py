@@ -4,6 +4,7 @@ import argparse
 import base64
 import hashlib
 import json
+import os
 from pathlib import Path
 import plistlib
 import re
@@ -27,6 +28,26 @@ def run(*args, capture=False):
 def require(condition, message):
     if not condition:
         raise RuntimeError(message)
+
+
+def load_release_config():
+    """Load non-secret per-checkout labels; explicit environment values win."""
+    path = ROOT / ".orbit-release.json"
+    if path.exists():
+        try:
+            settings = json.loads(path.read_text())
+        except (ValueError, OSError) as error:
+            raise RuntimeError(f"Cannot read {path.name}: {error}") from error
+        allowed = {"notary_profile": "ORBIT_NOTARY_PROFILE",
+                   "sparkle_account": "ORBIT_SPARKLE_ACCOUNT",
+                   "code_sign_identity": "ORBIT_CODE_SIGN_IDENTITY"}
+        require(isinstance(settings, dict) and set(settings) <= set(allowed),
+                "Release config accepts only notary_profile, sparkle_account, and code_sign_identity; never store credentials here")
+        for key, value in settings.items():
+            require(isinstance(value, str) and bool(value.strip()), f"Invalid release config value: {key}")
+            os.environ.setdefault(allowed[key], value)
+    require(bool(os.environ.get("ORBIT_NOTARY_PROFILE")),
+            "Configure this Mac first: copy .orbit-release.example.json to .orbit-release.json and set its Keychain profile name. See docs/RELEASING.md.")
 
 
 def api(path):
@@ -171,12 +192,18 @@ def publish():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--verify", metavar="TAG", help="Read-only verification of an existing public release")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--verify", metavar="TAG", help="Read-only verification of an existing public release")
+    modes.add_argument("--check-config", action="store_true", help="Validate non-secret local configuration without building or publishing")
     args = parser.parse_args()
     if args.verify:
         verify_remote(args.verify)
     else:
-        publish()
+        load_release_config()
+        if args.check_config:
+            print("Release configuration loaded. Credential availability is checked during signing; nothing was built or published.")
+        else:
+            publish()
 
 
 if __name__ == "__main__":
